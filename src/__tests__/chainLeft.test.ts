@@ -51,4 +51,13 @@ describe('Left-Value', () => {
 
     await expect(p).rejects.toThrowError('error from left');
   });
+
+  it('should not process error', async () => {
+    const p = FutureEither.fromPromise(async (str: string) => str)('apple')
+      .chain(future => FutureEither.reject(new Error('apple error')))
+      .chainLeft(future => Future.reject('apple error handled by chainLeft()'))
+      .toPromiseValue()
+    await expect(p).rejects.toThrow('apple error');
+  });
+
 });

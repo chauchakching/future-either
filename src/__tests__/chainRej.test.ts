@@ -1,9 +1,8 @@
 import FutureEither, { FutureEitherInstance } from '../index';
 import Future from 'fluture';
 
-// TODO: redesign this test suite in the future since the payload is so strange!
 describe('ChainRej()', () => {
-  let p2 = FutureEither.fromFuture(Future.reject('fake error')).chainLeft(() => Future.reject(new Error('error01')));
+  const p2 = FutureEither.reject(new Error('error01'));
 
   test('should chainRej to another FutureEither instance', async () => {
     const p = p2

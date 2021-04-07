@@ -10,39 +10,19 @@ export class FutureEitherInstance<L, R> {
     this.futureEither = futureEither;
   }
 
-  public chainLeft<V>(mapper: (a: L) => FutureInstance<any, V>): FutureEitherInstance<V, R> {
+  public chainLeft<V>(f: (a: L) => FutureInstance<any, V>): FutureEitherInstance<V, R> {
+    // @ts-ignore
     return new FutureEitherInstance(
-      this.futureEither.chain(fe =>
-        fe
-          .map(rv => Future.of(rv))
-          // @ts-ignore
-          .chainRej(lv =>
-            // @ts-ignore
-            mapper(lv)
-              .chain((v: V) => Future.of(Future.reject(v)))
-              .chainRej((e: any) => Future.reject(e)),
-          ),
+      this.futureEither.chain(
+        eitherValue =>
+          eitherValue.map(rv => Future.of(rv)).chainRej(lv => f(lv).chain((v: V) => Future.of(Future.reject(v)))),
       ),
     );
   }
 
-  public chainRight<V>(mapper: (a: R) => FutureInstance<any, V>): FutureEitherInstance<L, V> {
-    return new FutureEitherInstance(
-      this.futureEither.chain(fe =>
-        fe
-          // @ts-ignore
-          // swap(): to prevent F<any, F<L, any>> affected .chain() flow which should NOT be executed at all!
-          .chainRej(lv => Future.of(Future.reject(lv)).swap())
-          // @ts-ignore
-          .chain(rv =>
-            mapper(rv)
-              .chain((v: V) => Future.of(Future.of(v)))
-              .chainRej((e: any) => Future.reject(e))
-              .swap(),
-          )
-          .swap(),
-      ),
-    );
+  public chainRight<R>(f: (a: R) => FutureInstance<L, R>): FutureEitherInstance<L, R> {
+    // @ts-ignore
+    return this.chain(eitherValue => fromFuture(eitherValue.chain<R>(f)));
   }
 
   public chain(mapper: (a: FutureInstance<L, R>) => FutureEitherInstance<L, R>): FutureEitherInstance<L, R> {
@@ -66,20 +46,24 @@ export class FutureEitherInstance<L, R> {
     return this.futureEither.chain(fe => fe);
   }
 
-  public toPromiseValue(): Promise<R> {
-    return (
-      this.futureEither
-        // @ts-ignore
-        .chain(fe => fe)
-        .promise()
-    );
+  public async toPromiseValue(): Promise<R> {
+    const eitherValue = await this.futureEither.promise();
+    return eitherValue.promise();
   }
 }
 
+function fromFuture<L, R>(future: FutureInstance<L, R>): FutureEitherInstance<L, R> {
+  return new FutureEitherInstance(Future.of(future));
+}
+
 export default {
-  fromFuture<L, R>(future: FutureInstance<L, R>): FutureEitherInstance<L, R> {
-    return new FutureEitherInstance(Future.of(future));
+  resolve<L, R>(v: R): FutureEitherInstance<L, R> {
+    return new FutureEitherInstance(Future.of(Future.of(v)));
   },
+  reject<L, R>(reason: any): FutureEitherInstance<L, R> {
+    return new FutureEitherInstance(Future.reject(reason));
+  },
+  fromFuture,
   fromPromise<L, R, A>(fn: (a: A) => Promise<R>): (a: A) => FutureEitherInstance<L, R> {
     const futureP = Future.encaseP<L, R, A>(fn);
 

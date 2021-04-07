@@ -40,6 +40,21 @@ Construct a function that returns a `FutureEither` object from a promise functio
 
 Notice: there will be only `L`, `R` branch of the `FutureEither` object, corresponding to `Promise.reject` and `Promise.resolve` respectively. `E` branch will not happen there.
 
+#### resolve
+```hs
+FutureEither.resolve  :: R -> FutureEither<E, L, R> 
+```
+
+Construct a `FutureEither` object from a value.
+
+#### reject
+```hs
+FutureEither.reject  :: E -> FutureEither<E, L, R> 
+```
+
+Construct a `FutureEither` object from a fatal error.
+
+
 #### fromP2
 
 ```hs
